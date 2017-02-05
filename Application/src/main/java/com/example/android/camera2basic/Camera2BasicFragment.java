@@ -15,8 +15,8 @@
  */
 
 package com.example.android.camera2basic;
-//this is  a change
 import android.Manifest;
+import android.animation.Animator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -24,13 +24,18 @@ import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.Drawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -43,12 +48,21 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.effect.Effect;
+import android.media.effect.EffectContext;
+import android.media.effect.EffectFactory;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicBlur;
 import android.support.annotation.NonNull;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -56,13 +70,21 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AnimationUtils;
+import android.view.animation.RotateAnimation;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,7 +113,7 @@ public class Camera2BasicFragment extends Fragment
     /**
      * Tag for the {@link Log}.
      */
-    private static final String TAG = "Camera2BasicFragment";
+    private static final String TAG = "CameraDebug";
 
     /**
      * Camera state: Showing camera preview.
@@ -233,6 +255,7 @@ public class Camera2BasicFragment extends Fragment
      * This is the output file for our picture.
      */
     private File mFile;
+    private Bitmap savedImage;
 
     /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
@@ -243,10 +266,104 @@ public class Camera2BasicFragment extends Fragment
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+
+            ByteBuffer buf = reader.acquireLatestImage().getPlanes()[0].getBuffer();
+            byte[] imageBytes = new byte[buf.remaining()];
+            buf.get(imageBytes);
+            final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
+            Log.d(TAG,"Bitmap Size:"+bmp.getWidth()+"w "+bmp.getHeight()+"h");
+            //TODO IF we want to save photo ->
+            savedImage = cropSquareImage(bmp);
+            showPreview(savedImage,blurImage(bmp));
         }
 
     };
+
+    private Bitmap rotateBitmap(Bitmap bmp){
+        Matrix matrix = new Matrix();
+        matrix.postRotate(-90f);
+        return Bitmap.createBitmap(bmp,0,0,bmp.getWidth(),bmp.getHeight(),matrix,true);
+
+    }
+
+    private Bitmap cropSquareImage(Bitmap bmp) {
+        Bitmap resized;
+        if (bmp.getWidth() >= bmp.getHeight()){
+            resized = Bitmap.createBitmap(
+                    bmp,//Src
+                    bmp.getWidth()/2 - bmp.getHeight()/2,//x
+                    0,//y
+                    bmp.getHeight(),//dstWidth
+                    bmp.getHeight()//dstHeight
+            );
+        }else{
+            resized = Bitmap.createBitmap(
+                    bmp,//src
+                    0,//x
+                    bmp.getHeight()/2 - bmp.getWidth()/2,//y
+                    bmp.getWidth(),//dstWidth
+                    bmp.getWidth()//dstHeight
+            );
+        }
+        return resized;
+    }
+
+    private Bitmap blurImage (Bitmap bmp){
+
+        final float BITMAP_SCALE = 0.3f;
+        final float BLUR_RADIUS = 15f;
+        int width = Math.round(bmp.getWidth() * BITMAP_SCALE);
+        int height = Math.round(bmp.getHeight() * BITMAP_SCALE);
+        Bitmap inputBitmap = Bitmap.createScaledBitmap(bmp, width, height, false);
+        Bitmap outputBitmap = Bitmap.createBitmap(inputBitmap);
+        RenderScript rs = RenderScript.create(getActivity().getBaseContext());
+        ScriptIntrinsicBlur theIntrinsic = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
+        Allocation tmpIn = Allocation.createFromBitmap(rs, inputBitmap);
+        Allocation tmpOut = Allocation.createFromBitmap(rs, outputBitmap);
+        theIntrinsic.setRadius(BLUR_RADIUS);
+        theIntrinsic.setInput(tmpIn);
+        theIntrinsic.forEach(tmpOut);
+        tmpOut.copyTo(outputBitmap);
+
+        return outputBitmap;
+    }
+
+
+    /**
+     * Run the UI thread to show an Imageview
+     *
+     *
+     */
+    private void showPreview(final Bitmap thumbnailBitmap, final Bitmap blurBitmap) {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // This code will always run on the UI thread, therefore is safe to modify UI elements.
+                imageTaken.setImageBitmap(thumbnailBitmap);
+                blurImage.setImageBitmap(blurBitmap);
+                //imageTaken.setImageBitmap(Bitmap.createScaledBitmap(bmp,1080,1920,false));
+                previewLayout.setVisibility(View.VISIBLE);
+                //sendLayout.setVisibility(View.VISIBLE);
+                controlLayout.setVisibility(View.GONE);
+                blurImage.setVisibility(View.VISIBLE);
+                revealAnimation(imageTaken);
+                revealAnimation(sendLayout);
+
+                //TODO Aqui potser hauriem de fer visible tmb la SendLayout
+            }
+        });
+
+    }
+    private void hidePreview() {
+
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                previewLayout.setVisibility(View.GONE);
+            }
+        });
+
+    }
 
     /**
      * {@link CaptureRequest.Builder} for the camera preview
@@ -280,6 +397,17 @@ public class Camera2BasicFragment extends Fragment
      */
     private int mSensorOrientation;
 
+    /**
+     * Buttons and Layout objects
+     */
+    private ImageView imageTaken,blurImage;
+    private ImageButton saveBtn,downloadBtn,retakeBtn,rotateBtn;
+    private ImageButton flashBtn,snapBtn,backBtn;
+
+    private RelativeLayout controlLayout,sendLayout,previewLayout;
+
+
+    private boolean flashState;
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
@@ -414,6 +542,47 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
+    //Custom  optimal size algorithm
+    private Size getOptimalSize(Size[] sizes, int w, int h) {
+
+        final double ASPECT_TOLERANCE = 0.1;
+        double targetRatio = (double) w / h;
+        if (sizes == null)
+            return null;
+        Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+        int targetHeight = h;
+        // Try to find an size match aspect ratio and size
+        for (Size size : sizes)
+        {
+            //Log.d(TAG, "Checking size " + size.getWidth() + "w " + size.getHeight() + "h");
+            double ratio = (double) size.getWidth() / size.getHeight();
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
+                continue;
+            if (Math.abs(size.getHeight() - targetHeight) < minDiff)
+            {
+                optimalSize = size;
+                minDiff = Math.abs(size.getHeight() - targetHeight);
+            }
+        }
+        // Cannot find the one match the aspect ratio, ignore the requirement
+
+        if (optimalSize == null)
+        {
+            minDiff = Double.MAX_VALUE;
+            for (Size size : sizes) {
+                if (Math.abs(size.getHeight() - targetHeight) < minDiff)
+                {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.getHeight() - targetHeight);
+                }
+            }
+        }
+
+      Log.d(TAG, "Display Size: " + optimalSize.getWidth() + "w " + optimalSize.getHeight() + "h");
+        return optimalSize;
+    }
+
     public static Camera2BasicFragment newInstance() {
         return new Camera2BasicFragment();
     }
@@ -426,15 +595,51 @@ public class Camera2BasicFragment extends Fragment
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
-        view.findViewById(R.id.picture).setOnClickListener(this);
-        view.findViewById(R.id.info).setOnClickListener(this);
+
+
+        //Layouts
+        sendLayout = (RelativeLayout) view.findViewById(R.id.send);
+            sendLayout.setVisibility(View.GONE);
+        controlLayout = (RelativeLayout) view.findViewById(R.id.control);
+            controlLayout.setVisibility(View.VISIBLE);
+        previewLayout = (RelativeLayout) view.findViewById(R.id.preview);
+            sendLayout.setVisibility(View.GONE);
+
+        //Buttons
+        snapBtn = (ImageButton) view.findViewById(R.id.snapBtn);
+            snapBtn.setOnClickListener(this);
+            snapBtn.setBackgroundResource(R.drawable.snap_animation);
+
+        saveBtn = (ImageButton) view.findViewById(R.id.sendBtn);
+            saveBtn.setOnClickListener(this);
+            saveBtn.setBackgroundResource(R.drawable.send_animation);
+        rotateBtn = (ImageButton) view.findViewById(R.id.rotateBtn);
+            rotateBtn.setOnClickListener(this);
+        retakeBtn = (ImageButton) view.findViewById(R.id.retakeBtn);
+            retakeBtn.setOnClickListener(this);
+
+        backBtn = (ImageButton) view.findViewById(R.id.backBtn);
+            backBtn.setOnClickListener(this);
+        flashBtn = (ImageButton) view.findViewById(R.id.flashBtn);
+            flashBtn.setOnClickListener(this);
+            flashState=false;
+            flashBtn.setImageResource(R.drawable.ic_flash_off);
+
+        downloadBtn = (ImageButton) view.findViewById(R.id.downloadBtn);
+            downloadBtn.setOnClickListener(this);
+
+        imageTaken = (ImageView) view.findViewById(R.id.imageThumbnail);
+        blurImage = (ImageView) view.findViewById(R.id.blurThumbnail);
+        //TextureView
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+
+        //Animations
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mFile = new File(getActivity().getExternalFilesDir(null), "pic.jpg");
+
     }
 
     @Override
@@ -460,14 +665,14 @@ public class Camera2BasicFragment extends Fragment
         super.onPause();
     }
 
-    private void requestCameraPermission() {
+/*    private void requestCameraPermission() {
         if (FragmentCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
             new ConfirmationDialog().show(getChildFragmentManager(), FRAGMENT_DIALOG);
         } else {
             FragmentCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
                     REQUEST_CAMERA_PERMISSION);
         }
-    }
+    }*/
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -508,11 +713,20 @@ public class Camera2BasicFragment extends Fragment
                     continue;
                 }
 
+                List<Size> optimalSizes = new ArrayList<>();
+                for (Size size : map.getOutputSizes(ImageFormat.JPEG))
+                {
+                    if(size.getHeight()*size.getWidth() <= 1920*1080)
+                        optimalSizes.add(size);
+
+                    //Log.d(TAG, "Output sizes: " + size.getWidth() + "w " + size.getHeight() + "h");
+                }
+
                 // For still image captures, we use the largest available size.
-                Size largest = Collections.max(
-                        Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
-                        new CompareSizesByArea());
-                mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
+                //Size largest = Collections.max( Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
+                Size optimal = Collections.max( optimalSizes, new CompareSizesByArea());
+                Log.d(TAG, "Output Image Size: " + optimal.getWidth() + "w " + optimal.getHeight() + "h");
+                mImageReader = ImageReader.newInstance(optimal.getWidth(), optimal.getHeight(),
                         ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(
                         mOnImageAvailableListener, mBackgroundHandler);
@@ -565,18 +779,21 @@ public class Camera2BasicFragment extends Fragment
                 // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                        rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
-                        maxPreviewHeight, largest);
+
+                //mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth, maxPreviewHeight, largest);
+
+                mPreviewSize = getOptimalSize(map.getOutputSizes(SurfaceTexture.class),maxPreviewWidth,maxPreviewHeight);
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
                 int orientation = getResources().getConfiguration().orientation;
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
                     mTextureView.setAspectRatio(
                             mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                    //mTextureView.setAspectRatio(displaySize.x,displaySize.y);
                 } else {
                     mTextureView.setAspectRatio(
                             mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                    //mTextureView.setAspectRatio(displaySize.x,displaySize.y);
                 }
 
                 // Check if the flash is supported.
@@ -600,11 +817,11 @@ public class Camera2BasicFragment extends Fragment
      * Opens the camera specified by {@link Camera2BasicFragment#mCameraId}.
      */
     private void openCamera(int width, int height) {
-        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+/*        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCameraPermission();
             return;
-        }
+        }*/
         setUpCameraOutputs(width, height);
         configureTransform(width, height);
         Activity activity = getActivity();
@@ -706,7 +923,7 @@ public class Camera2BasicFragment extends Fragment
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                                 // Flash is automatically enabled when necessary.
-                                setAutoFlash(mPreviewRequestBuilder);
+                                setAutoFlash(mPreviewRequestBuilder,flashState);
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
@@ -822,7 +1039,7 @@ public class Camera2BasicFragment extends Fragment
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            setAutoFlash(captureBuilder);
+            setAutoFlash(captureBuilder,flashState);
 
             // Orientation
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -835,8 +1052,7 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    showToast("Saved: " + mFile);
-                    Log.d(TAG, mFile.toString());
+                    //showToast("Snap!");
                     unlockFocus();
                 }
             };
@@ -871,13 +1087,12 @@ public class Camera2BasicFragment extends Fragment
             // Reset the auto-focus trigger
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-            setAutoFlash(mPreviewRequestBuilder);
+            setAutoFlash(mPreviewRequestBuilder,flashState);
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
             mState = STATE_PREVIEW;
-            mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
-                    mBackgroundHandler);
+        //    mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -886,28 +1101,151 @@ public class Camera2BasicFragment extends Fragment
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.picture: {
+            case R.id.snapBtn: {
+                AnimationDrawable snapAnim = (AnimationDrawable) snapBtn.getBackground();
+                snapAnim.start();
                 takePicture();
+                //mCaptureSession.close();
+                //mCaptureSession.stopRepeating();
+                //sendLayout.setVisibility(View.VISIBLE);
+                //controlLayout.setVisibility(View.GONE);
                 break;
             }
-            case R.id.info: {
-                Activity activity = getActivity();
-                if (null != activity) {
-                    new AlertDialog.Builder(activity)
-                            .setMessage(R.string.intro_message)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
+            case R.id.sendBtn: {
+        //        hidePreview();
+                AnimationDrawable sendAnim = (AnimationDrawable) snapBtn.getBackground();
+                sendAnim.start();
+                ImageView sendImage = (ImageView) getActivity().findViewById(R.id.imageRecieved);
+                //TODO Send image to main Activity /or main fragment, maybe we can send it from here.
+                sendImage.setImageBitmap(savedImage);
+
+                //showToast("Image Sent");
+                //saveBtn.setVisibility(View.INVISIBLE);
+                //retakeBtn.setVisibility(View.INVISIBLE);
+        //        sendLayout.setVisibility(View.GONE);
+        //        controlLayout.setVisibility(View.VISIBLE);
+                //snapBtn.setVisibility(View.VISIBLE);
+                getActivity().findViewById(R.id.openCamera).setVisibility(View.VISIBLE);
+                savedImage=null;
+                closeCamera();
+                closeFragment();
+
+                break;
+            }
+            case R.id.retakeBtn: {
+
+                //hidePreview();
+                previewLayout.setVisibility(View.GONE);
+                //closeCamera();
+                //openCamera(mTextureView.getWidth(),mTextureView.getHeight());
+                createCameraPreviewSession();
+                mState = STATE_PREVIEW;
+                //unlockFocus();
+                sendLayout.setVisibility(View.GONE);
+                controlLayout.setVisibility(View.VISIBLE);
+
+                break;
+            }
+
+            case R.id.flashBtn: {
+                if(flashState) {
+                    flashBtn.setImageResource(R.drawable.ic_flash_off);
+                    flashState = false;
+                }else{
+                    flashBtn.setImageResource(R.drawable.ic_flash_on);
+                    flashState = true;
                 }
+
+                break;
+            }
+
+            case R.id.downloadBtn: {
+                try {
+                    mFile = createFile();
+                    //mFile = new File(Environment.getExternalStorageDirectory(),File.separator+"youcam"+File.separator+"pic"+Math.random()*1000+".jpg");
+                    mBackgroundHandler.post(new ImageSaver(savedImage, mFile));
+                    Log.d(TAG,"Saved image: "+mFile.toString());
+                    showToast("Saved image: "+mFile.toString());
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            }
+
+            case R.id.backBtn: {
+                closeCamera();
+                getActivity().findViewById(R.id.openCamera).setVisibility(View.VISIBLE);
+                closeFragment();
+
+                break;
+            }
+
+            case R.id.rotateBtn: {
+
+                float deg = rotateBtn.getRotation() - 90F;
+                rotateBtn.animate().rotation(deg).setInterpolator(new AccelerateDecelerateInterpolator());
+                if(savedImage != null){
+                    savedImage = rotateBitmap(savedImage);
+                    imageTaken.setImageBitmap(savedImage);
+
+                }
+
                 break;
             }
         }
     }
+    private File createFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(System.currentTimeMillis());
+        File storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM) + "/camera/");
+        if (!storageDir.exists())
+            storageDir.mkdirs();
+        File image = File.createTempFile(
+                "youcam-"+timeStamp,         /* prefix */
+                ".jpeg",                     /* suffix */
+                storageDir                   /* directory */
+        );
+        return image;
+    }
 
-    private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
+    private void closeFragment(){
+        getActivity().getFragmentManager().beginTransaction().remove(this).commit();
+
+    }
+
+    private void setAutoFlash(CaptureRequest.Builder requestBuilder, boolean flash) {
         if (mFlashSupported) {
-            requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            if(flash){
+                requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                        CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+            }
+            else{
+                ;
+            }
         }
+    }
+
+    /*
+     * Reveal a previously Invisible View
+     */
+    private void revealAnimation(View myView){
+
+        // get the center for the clipping circle
+        int cx = myView.getWidth() / 2;
+        int cy = myView.getHeight() / 2;
+
+        // get the final radius for the clipping circle
+        float finalRadius = (float) Math.hypot(cx, cy);
+
+        // create the animator for this view (the start radius is zero)
+        Animator anim =
+                ViewAnimationUtils.createCircularReveal(myView, cx, cy, 0, finalRadius);
+
+        // make the view visible and start the animation
+        myView.setVisibility(View.VISIBLE);
+        anim.start();
+
     }
 
     /**
@@ -918,30 +1256,32 @@ public class Camera2BasicFragment extends Fragment
         /**
          * The JPEG image
          */
-        private final Image mImage;
+        private final Bitmap mImage;
         /**
          * The file we save the image into.
          */
         private final File mFile;
 
-        public ImageSaver(Image image, File file) {
+        public ImageSaver(Bitmap image, File file) {
             mImage = image;
             mFile = file;
         }
 
         @Override
         public void run() {
-            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
+            //ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+            //byte[] bytes = new byte[buffer.remaining()];
+            //buffer.get(bytes);
+
             FileOutputStream output = null;
             try {
                 output = new FileOutputStream(mFile);
-                output.write(bytes);
+                mImage.compress(Bitmap.CompressFormat.JPEG,85,output);
+                //output.write(bytes);
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                mImage.close();
+                //mImage.close();
                 if (null != output) {
                     try {
                         output.close();
@@ -962,8 +1302,8 @@ public class Camera2BasicFragment extends Fragment
         @Override
         public int compare(Size lhs, Size rhs) {
             // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
+
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight());
         }
 
     }
@@ -1002,7 +1342,7 @@ public class Camera2BasicFragment extends Fragment
     /**
      * Shows OK/Cancel confirmation dialog about camera permission.
      */
-    public static class ConfirmationDialog extends DialogFragment {
+   /* public static class ConfirmationDialog extends DialogFragment {
 
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -1013,7 +1353,9 @@ public class Camera2BasicFragment extends Fragment
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             FragmentCompat.requestPermissions(parent,
-                                    new String[]{Manifest.permission.CAMERA},
+                                    new String[]{Manifest.permission.CAMERA,
+                                                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                                 Manifest.permission.READ_EXTERNAL_STORAGE},
                                     REQUEST_CAMERA_PERMISSION);
                         }
                     })
@@ -1029,6 +1371,6 @@ public class Camera2BasicFragment extends Fragment
                             })
                     .create();
         }
-    }
+    }*/
 
 }

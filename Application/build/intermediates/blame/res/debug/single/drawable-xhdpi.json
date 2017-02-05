@@ -1,10 +1,38 @@
 [
     {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_back.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_back.png"
+    },
+    {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_cancel.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_cancel.png"
+    },
+    {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_flash_off.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_flash_off.png"
+    },
+    {
         "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_launcher.png",
         "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_launcher.png"
     },
     {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_save.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_save.png"
+    },
+    {
         "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_action_info.png",
         "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_action_info.png"
+    },
+    {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_flash_auto.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_flash_auto.png"
+    },
+    {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_flash_on.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_flash_on.png"
+    },
+    {
+        "merged": "E:\\AndroidProjects\\CameraLayout\\Application\\build\\intermediates\\res\\merged\\debug\\drawable-xhdpi\\ic_rotate.png",
+        "source": "E:\\AndroidProjects\\CameraLayout\\Application\\src\\main\\res\\drawable-xhdpi\\ic_rotate.png"
     }
 ]

@@ -16,20 +16,62 @@
 
 package com.example.android.camera2basic;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
 
 public class CameraActivity extends Activity {
+
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
+
+    public ImageView imageRecieved;
+    private Button openCamera;
+
+    //Permissions we need to ask for
+    private String[] PERMISSIONS = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
-        if (null == savedInstanceState) {
-            getFragmentManager().beginTransaction()
-                    .replace(R.id.container, Camera2BasicFragment.newInstance())
-                    .commit();
+
+        imageRecieved = (ImageView) findViewById(R.id.imageRecieved);
+        openCamera = (Button) findViewById(R.id.openCamera);
+
+        if(!hasPermissions(this, PERMISSIONS)){
+            ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_CAMERA_PERMISSION);
         }
+
+        openCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openCamera.setVisibility(View.GONE);
+                    getFragmentManager().beginTransaction()
+                            .replace(R.id.container, Camera2BasicFragment.newInstance())
+                            .commit();
+            }
+        });
+    }
+
+    public static boolean hasPermissions(Context context, String... permissions) {
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
 }

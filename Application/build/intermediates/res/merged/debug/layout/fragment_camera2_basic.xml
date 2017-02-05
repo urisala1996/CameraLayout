@@ -1,54 +1,139 @@
-<?xml version="1.0" encoding="utf-8"?><!--
- Copyright 2014 The Android Open Source Project
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
     <com.example.android.camera2basic.AutoFitTextureView
         android:id="@+id/texture"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
         android:layout_alignParentTop="true" />
 
-    <FrameLayout
+    <RelativeLayout
+        android:id="@+id/preview"
+        android:background="@android:color/transparent"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/blurThumbnail"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true"
+            android:layout_width="match_parent"
+            android:scaleType="fitXY"
+            android:elevation="0dp"
+            android:layout_height="match_parent"/>
+
+        <ImageView
+            android:id="@+id/imageThumbnail"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true"
+            android:elevation="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </RelativeLayout>
+
+
+
+    <RelativeLayout
         android:id="@+id/control"
         android:layout_width="match_parent"
-        android:layout_height="112dp"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:background="@color/control_background">
-
-        <Button
-            android:id="@+id/picture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="@string/picture" />
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
 
         <ImageButton
-            android:id="@+id/info"
-            android:contentDescription="@string/description_info"
+            android:id="@+id/backBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="20dp"
+            android:src="@drawable/ic_back"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"/>
+
+        <ImageButton
+            android:id="@+id/flashBtn"
             style="@android:style/Widget.Material.Light.Button.Borderless"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical|right"
+            android:layout_gravity="center_vertical|end"
             android:padding="20dp"
-            android:src="@drawable/ic_action_info" />
+            android:src="@drawable/ic_flash_off"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"/>
 
-    </FrameLayout>
+        <ImageButton
+            android:id="@+id/snapBtn"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_gravity="center"
+            android:padding="20dp"
+            android:background="@drawable/snap_animation"
+            android:layout_width="82dp"
+            android:layout_height="82dp"
+            android:layout_marginBottom="15dp"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"/>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/send"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
+
+
+        <ImageButton
+            android:id="@+id/sendBtn"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_width="82dp"
+            android:layout_height="82dp"
+            android:layout_marginBottom="15dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/send_animation"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"/>
+
+        <ImageButton
+            android:id="@+id/retakeBtn"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|start"
+            android:padding="20dp"
+            android:src="@drawable/ic_cancel"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"/>
+
+        <ImageButton
+            android:id="@+id/rotateBtn"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|end"
+            android:src="@drawable/ic_rotate"
+            android:layout_alignTop="@+id/sendBtn"
+            android:layout_toStartOf="@+id/sendBtn"
+            android:layout_marginTop="25dp"/>
+
+        <ImageButton
+            android:id="@+id/downloadBtn"
+            style="@android:style/Widget.Material.Light.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|end"
+            android:src="@drawable/ic_save"
+            android:layout_alignTop="@+id/rotateBtn"
+            android:layout_toEndOf="@+id/sendBtn"/>
+
+    </RelativeLayout>
 
 </RelativeLayout>
+
+
