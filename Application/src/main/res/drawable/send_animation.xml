@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list
+    android:id="@+id/selected1"
+    android:oneshot="true"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:drawable="@drawable/anim_send_1" android:duration="50" />
+    <item android:drawable="@drawable/anim_send_2" android:duration="50" />
+    <item android:drawable="@drawable/anim_send_3" android:duration="50" />
+    <item android:drawable="@drawable/anim_send_4" android:duration="50" />
+</animation-list>

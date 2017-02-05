@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<instant-run
+    abi="armeabi-v7a,armeabi"
+    api-level="23"
+    density="xhdpi"
+    format="8"
+    plugin-version="2.2.3"
+    timestamp="509613627884396"
+    token="-4245317797853736779"
+    verifier="COMPATIBLE" >
+
+    <task
+        name="javac"
+        duration="0" />
+    <task
+        name="instant-run-dex"
+        duration="0" />
+    <task
+        name="instant-run-transform"
+        duration="0" />
+    <task
+        name="verifier"
+        duration="0" />
+
+    <artifact
+        location="E:\AndroidProjects\CameraLayout\Application\build\intermediates\instant-run-resources\resources-debug.ir.ap_"
+        type="RESOURCES" />
+
+    <build
+        timestamp="508609804571520"
+        verifier="BINARY_MANIFEST_FILE_CHANGE" >
+        <artifact
+            location="E:\AndroidProjects\CameraLayout\Application\build\outputs\apk\Application-debug.apk"
+            type="MAIN" />
+    </build>
+    <build
+        timestamp="509118431627369"
+        verifier="COMPATIBLE" >
+        <artifact
+            location="E:\AndroidProjects\CameraLayout\Application\build\intermediates\builds\debug\509118431627369\classes.dex"
+            type="RELOAD_DEX" />
+    </build>
+    <build
+        timestamp="509613627884396"
+        verifier="COMPATIBLE" >
+        <artifact
+            location="E:\AndroidProjects\CameraLayout\Application\build\intermediates\instant-run-resources\resources-debug.ir.ap_"
+            type="RESOURCES" />
+    </build>
+
+</instant-run>
